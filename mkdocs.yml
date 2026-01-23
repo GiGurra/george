@@ -1,0 +1,12 @@
+site_name: George
+site_description: GitOps-driven LLM agent reconciliation engine
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: indigo
+nav:
+  - Home: index.md
+  - Design Discussion: design-discussion.md
+  - Architecture: architecture.md
+  - Naming: naming.md
