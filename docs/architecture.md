@@ -480,6 +480,96 @@ Interactive mode also available in dashboard:
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### Breakpoints
+
+Set breakpoints to pause execution at specific points:
+
+```yaml
+# In job spec
+spec:
+  breakpoints:
+    - before: verify-access      # Pause before this step starts
+    - after: create-accounts     # Pause after this step completes
+    - on_subtask: true           # Pause when agent creates sub-tasks
+    - on_error: true             # Pause on any error (instead of auto-retry)
+```
+
+```bash
+# Via CLI
+george breakpoint job/onboard-alice --before verify-access
+george breakpoint job/onboard-alice --clear  # Remove all breakpoints
+```
+
+When a breakpoint hits, the job pauses and notifies the operator:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Job: onboard-alice-2024-01               [PAUSED:BREAKPOINT]│
+├─────────────────────────────────────────────────────────────┤
+│ ⏸ Breakpoint hit: before step "verify-access"              │
+│                                                             │
+│ [Resume] [Step Once] [Dry-Run Next] [Inspect] [Abort]       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Dry-Run Next Step
+
+Before executing, ask the agent to explain what it *would* do:
+
+```bash
+george dry-run job/onboard-alice-2024-01
+
+# Output:
+Step: verify-access
+Agent analysis:
+  "I would verify access for Alice Smith to the following systems:
+   - GitHub: Check if alice.smith can access github.com/company
+   - Slack: Verify membership in required channels
+   - Email: Confirm O365 login works
+   - HR Portal: Test SSO authentication
+
+   I would do this by:
+   1. Using the GitHub API to check org membership
+   2. Using Slack API to verify channel membership
+   3. For Email and HR Portal, I would need to ask Alice to confirm
+      or use a test credential if available
+
+   Potential issues:
+   - I don't have Alice's credentials to test login directly
+   - May need to ask Alice to verify herself via Slack DM"
+
+Estimated actions: 4 API calls, 1 Slack DM
+Estimated tokens: ~2000
+
+[Execute] [Skip] [Modify Step] [Abort]
+```
+
+This helps operators:
+- Understand agent reasoning before committing
+- Catch misunderstandings early
+- Estimate costs before execution
+
+### Step Preview in Dashboard
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Next Step Preview (dry-run)                                 │
+├─────────────────────────────────────────────────────────────┤
+│ Step: verify-access                                         │
+│                                                             │
+│ Agent would:                                                │
+│  • Call GitHub API: GET /orgs/company/members/alice.smith   │
+│  • Call Slack API: Check #engineering membership            │
+│  • Send DM to Alice: "Please confirm you can log into..."   │
+│                                                             │
+│ Confidence: High                                            │
+│ Estimated tokens: ~2000                                     │
+│ Potential issues: None detected                             │
+├─────────────────────────────────────────────────────────────┤
+│ [Execute] [Execute with Modifications] [Skip] [Edit Step]   │
+└─────────────────────────────────────────────────────────────┘
+```
+
 ## Sub-Tasks
 
 Steps can spawn sub-tasks for complex work. Sub-tasks are tracked as nested structures within the job.
@@ -607,6 +697,87 @@ Everything is logged:
 - CRD status changes with timestamps
 - Context DB for detailed execution history
 - Agent pod logs for debugging
+
+## Live Job Modifications
+
+Jobs can be modified while running. The engine reconciles the new desired state with current progress.
+
+**Note:** This is an advanced feature - may not be in v1.
+
+### Use Cases
+
+- **Add steps** - Discovered additional work needed mid-job
+- **Remove steps** - Step no longer relevant due to external changes
+- **Modify parameters** - Correct a typo or update requirements
+- **Insert steps** - Add a step between existing steps
+- **Change step order** - Reorder remaining pending steps
+
+### Constraints
+
+- **Completed steps** - Cannot be undone (but can add compensation steps)
+- **In-progress steps** - Must complete or be cancelled before modification takes effect
+- **Dependencies** - Engine validates new graph doesn't break dependencies
+
+### Example: Adding a Step Mid-Job
+
+```bash
+# Original job has 4 steps, currently on step 2
+george modify job/onboard-alice-2024-01 \
+  --add-step-after provision-laptop \
+  --step-name "security-training" \
+  --step-description "Ensure Alice completes security training" \
+  --done-when "Training completion certificate received"
+
+# Job now has 5 steps:
+# ✓ Step 1: create-accounts       [completed]
+# ◐ Step 2: provision-laptop      [in_progress]
+# ○ Step 3: security-training     [pending] ← NEW
+# ○ Step 4: verify-access         [pending]
+# ○ Step 5: schedule-orientation  [pending]
+```
+
+### Modification Status
+
+```yaml
+status:
+  modifications:
+    - at: "2024-01-20T15:00:00Z"
+      by: "johan@company.com"
+      type: add_step
+      detail: "Added security-training after provision-laptop"
+      reason: "Compliance requirement discovered"
+```
+
+### Via Git (GitOps Style)
+
+Modifications can also come through Git:
+
+1. Edit the Job YAML in Git
+2. Commit and push
+3. Engine detects change
+4. Engine validates modification is safe
+5. Engine applies modification to running job
+
+```yaml
+# The job spec can include modification policy
+spec:
+  allowLiveModifications:
+    addSteps: true
+    removeSteps: pending_only  # Can only remove pending steps
+    reorderSteps: true
+    modifyParameters: false    # Lock parameters after start
+```
+
+### Validation
+
+Engine validates before applying:
+
+```
+Modification rejected:
+  Cannot remove step "create-accounts" - already completed.
+  Cannot reorder step "verify-access" before "provision-laptop" -
+    verify-access depends on provision-laptop output.
+```
 
 ## Future Considerations
 
