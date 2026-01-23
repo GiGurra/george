@@ -9,4 +9,8 @@ nav:
   - Home: index.md
   - Design Discussion: design-discussion.md
   - Architecture: architecture.md
+  - Resources: resources.md
+  - Engine: engine.md
+  - Integrations: integrations.md
+  - Operations: operations.md
   - Naming: naming.md

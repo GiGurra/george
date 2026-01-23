@@ -6,9 +6,9 @@ A GitOps-driven LLM agent reconciliation engine.
 
 George is a platform for orchestrating LLM agents using GitOps principles and Kubernetes-style reconciliation. The core idea:
 
-1. **Define** agent capabilities, task templates, and job instances declaratively in Git
-2. **Reconcile** desired state (Git) with actual state (running agents, task progress)
-3. **Observe** everything through a dashboard - steps, sub-tasks, human handoffs, completions
+1. **Define** agent capabilities, task templates, and job instances declaratively
+2. **Reconcile** desired state with actual state (running agents, task progress)
+3. **Observe** everything through Jira - steps, sub-tasks, human handoffs, completions
 4. **Resume** seamlessly - agents are stateless and reconstruct their context from external state
 
 ## Why?
@@ -29,17 +29,66 @@ LLM agents can help, but managing them at scale introduces new problems:
 
 George applies GitOps principles to solve these problems.
 
+## Key Components
+
+| Component | Description |
+|-----------|-------------|
+| **Jira** | Primary storage and visualization layer |
+| **George Engine** | Go service that runs the reconciliation loop |
+| **Agents** | Containerized workers (Docker or K8s) |
+| **CLI** | `george` command-line tool |
+| **MCP** | Integration with Claude Code and AI assistants |
+
 ## Key Principles
 
-- **Git as source of truth** - All definitions live in version control
-- **Reconciliation loop** - Kubernetes-style continuous reconciliation
-- **Stateless agents** - Agents reconstruct context from external state (CRDs + DB)
+- **GitOps** - Definitions live in version control
+- **Reconciliation** - Kubernetes-style continuous reconciliation
+- **Stateless agents** - Agents reconstruct context from external state (Jira + DB)
 - **Idempotent operations** - Steps can be safely retried
 - **Human-in-the-loop** - First-class support for human tasks and approvals
 - **Observable** - Full visibility into all steps, sub-tasks, and state transitions
 
 ## Documentation
 
-- [Design Discussion](design-discussion.md) - How we arrived at this design
-- [Architecture](architecture.md) - Technical details and resource schemas
+- [Design Discussion](design-discussion.md) - How we arrived at this design, trade-offs considered
+- [Architecture](architecture.md) - High-level system architecture
+- [Resources](resources.md) - AgentSpec, TaskTemplate, Job schemas
+- [Engine](engine.md) - George engine implementation details
+- [Integrations](integrations.md) - Jira, Slack, CLI, MCP
+- [Operations](operations.md) - Human intervention, debugging, live modifications
 - [Naming](naming.md) - Project name alternatives (George is a working title)
+
+## Quick Example
+
+```yaml
+# TaskTemplate: Define what work looks like
+apiVersion: george.io/v1
+kind: TaskTemplate
+metadata:
+  name: employee-onboarding
+spec:
+  description: "Onboard a new employee"
+  parameters:
+    - name: employeeName
+      type: string
+  steps:
+    - name: create-accounts
+      description: "Create accounts in all required systems"
+    - name: provision-laptop
+      description: "Request IT to provision laptop"
+    - name: verify-access
+      description: "Verify employee can log into all systems"
+```
+
+```bash
+# Create a job
+george run template/employee-onboarding \
+  --param employeeName="Alice Smith"
+
+# Watch progress
+george attach job/GEORGE-123
+```
+
+## Status
+
+Early concept/design phase. See the documentation for design discussions and architecture.
