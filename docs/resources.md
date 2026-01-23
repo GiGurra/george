@@ -1,6 +1,15 @@
 # Resources
 
-George uses three main resource types to define and track work.
+George uses three main concepts to define and track work. In v1, these map directly to Jira constructs.
+
+| Concept | Jira Implementation |
+|---------|---------------------|
+| AgentSpec | Engine configuration |
+| TaskTemplate | Issue Type + Custom Fields |
+| Job | Issue |
+| Step | Subtask or Checklist item |
+
+The YAML examples below document the logical structure. In practice, you configure these in Jira's admin UI (issue types, custom fields, screens).
 
 ## AgentSpec
 

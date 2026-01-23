@@ -1,15 +1,15 @@
 # George
 
-A GitOps-driven LLM agent reconciliation engine.
+An LLM agent reconciliation engine with Jira as the primary interface.
 
 ## What is this?
 
-George is a platform for orchestrating LLM agents using GitOps principles and Kubernetes-style reconciliation. The core idea:
+George is a platform for orchestrating LLM agents using Kubernetes-style reconciliation. The core idea:
 
-1. **Define** agent capabilities, task templates, and job instances declaratively
-2. **Reconcile** desired state with actual state (running agents, task progress)
-3. **Observe** everything through Jira - steps, sub-tasks, human handoffs, completions
-4. **Resume** seamlessly - agents are stateless and reconstruct their context from external state
+1. **Order work** via Jira - create an issue, fill in the form, done
+2. **Reconcile** - engine watches Jira and spawns agents to do the work
+3. **Observe** everything in Jira - steps, sub-tasks, human handoffs, completions
+4. **Resume** seamlessly - agents are stateless and reconstruct context from Jira
 
 ## Why?
 
@@ -41,12 +41,12 @@ George applies GitOps principles to solve these problems.
 
 ## Key Principles
 
-- **GitOps** - Definitions live in version control
+- **Jira-native** - Use Jira for everything: templates, jobs, status, history
 - **Reconciliation** - Kubernetes-style continuous reconciliation
-- **Stateless agents** - Agents reconstruct context from external state (Jira + DB)
+- **Stateless agents** - Agents reconstruct context from Jira
 - **Idempotent operations** - Steps can be safely retried
 - **Human-in-the-loop** - First-class support for human tasks and approvals
-- **Observable** - Full visibility into all steps, sub-tasks, and state transitions
+- **Observable** - Full visibility in a tool you already use
 
 ## Documentation
 

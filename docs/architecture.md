@@ -1,13 +1,24 @@
 # Architecture
 
-High-level architecture of George - the GitOps-driven LLM agent reconciliation engine.
+High-level architecture of George - an LLM agent reconciliation engine.
 
 ## Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Jira (Storage + Visualization)           │
-│         Jobs, steps, status, comments, evidence, audit      │
+│                         User                                │
+│            Creates issue in Jira, fills form                │
+└─────────────────────────────┬───────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Jira (Templates + Jobs + Status)               │
+│                                                             │
+│  Issue Types = Task Templates                               │
+│  Custom Fields = Parameters                                 │
+│  Issues = Jobs                                              │
+│  Subtasks = Steps                                           │
+│  Comments = Agent activity log                              │
 └─────────────────────────────┬───────────────────────────────┘
                               │ watches / updates
                               ▼
@@ -39,6 +50,28 @@ High-level architecture of George - the GitOps-driven LLM agent reconciliation e
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## V1: Jira-Native (No GitOps)
+
+For v1, everything lives in Jira:
+
+| Concept | Jira Implementation |
+|---------|---------------------|
+| Task Template | Issue Type + Custom Fields + Create Screen |
+| Template Parameters | Required Custom Fields |
+| Steps | Subtasks or Checklist |
+| Job Instance | Issue of that type |
+| Job Status | Issue Status + Subtask statuses |
+| Agent Activity | Comments |
+| Evidence | Attachments + Comments |
+
+**Benefits:**
+- No git sync needed
+- Users stay in familiar Jira UI
+- Faster to prototype
+- One less integration point
+
+**GitOps can come later** if we need version-controlled templates, PR review for changes, or cross-environment replication.
+
 ## Components
 
 | Component | Description | Details |
@@ -60,12 +93,12 @@ High-level architecture of George - the GitOps-driven LLM agent reconciliation e
 
 ## Key Principles
 
-1. **GitOps** - All definitions in version control
+1. **Jira-native** - Jira is the interface for users, storage for state
 2. **Reconciliation** - Engine continuously reconciles desired vs actual state
-3. **Stateless agents** - Agents reconstruct context from external state
+3. **Stateless agents** - Agents reconstruct context from Jira
 4. **Idempotent operations** - Steps can be safely retried
 5. **Human-in-the-loop** - First-class support for human tasks
-6. **Observable** - Full visibility into all state transitions
+6. **Observable** - Full visibility in tools you already use
 
 ## Security Model
 
@@ -163,6 +196,17 @@ Agents spawning other tracked agents. The engine would manage:
 - Parent-child job relationships
 - Cascading cancellation
 - Aggregated status views
+
+### GitOps Integration
+
+If needed later, templates could be managed in Git:
+
+- Template definitions in YAML, synced to Jira issue types
+- PR review before template changes go live
+- Version history of template evolution
+- Cross-environment replication
+
+For v1, Jira-native is simpler and sufficient.
 
 ## Documentation Map
 

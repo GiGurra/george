@@ -1,6 +1,6 @@
 # George Engine
 
-The George engine is the core reconciliation service that watches for jobs and manages agent lifecycles.
+The George engine is the core reconciliation service that watches Jira for jobs and manages agent lifecycles.
 
 ## Overview
 
@@ -32,11 +32,13 @@ The George engine is the core reconciliation service that watches for jobs and m
 
 The engine is a simple Go application that:
 
-1. **Watches** Jira for new/changed jobs (polling or webhooks)
-2. **Reconciles** desired state with actual state
+1. **Watches** Jira for new issues of configured types (polling or webhooks)
+2. **Reconciles** desired state (new/pending jobs) with actual state (running agents)
 3. **Spawns** agents as containers (Docker or K8s pods)
 4. **Monitors** agent health and job progress
 5. **Updates** Jira with status changes
+
+No git sync required - Jira is the source of truth for jobs.
 
 ### Reconciliation Loop
 

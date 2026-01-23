@@ -2,9 +2,21 @@
 
 George integrates with external systems for storage, communication, and interaction.
 
-## Jira (Primary Storage + Visualization)
+## Jira (Primary Interface)
 
-Jira serves as the primary storage and visualization layer for George. This gives us:
+Jira is the primary interface for George - both for users ordering work and for tracking/visualization.
+
+### Why Jira as the Interface?
+
+Instead of building a custom UI or requiring users to commit YAML to git, we use Jira:
+
+- **Users already know Jira** - no new tool to learn
+- **Issue types = templates** - create "Employee Onboarding" issue type
+- **Custom fields = parameters** - require employeeName, department, etc.
+- **Create screens = forms** - users fill out a form to order work
+- **Built-in everything** - dashboards, boards, search, mobile app
+
+### What Jira Provides
 
 - **Issue tracking** - Jobs as issues, steps as subtasks or checklists
 - **Workflow states** - Built-in status transitions

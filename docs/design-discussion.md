@@ -18,16 +18,42 @@ LLM agents could perform these tasks, but managing agents at scale introduces ne
 - Visualizing progress and status
 - Maintaining audit trails
 
-## The Core Insight: GitOps + Reconciliation
+## The Core Insight: Reconciliation + Jira
 
-What if we applied GitOps and Kubernetes-style reconciliation to agent orchestration?
+What if we applied Kubernetes-style reconciliation to agent orchestration, using Jira as the interface?
 
-1. **Define agent capabilities** (not related to a particular flow/task) - in Git
-2. **Define task templates** with variables (fuzzy or strict) - in Git
-3. **Commit job instances** (template + parameters) - in Git
-4. **Reconciliation engine** watches Git and ensures actual state matches desired state
-5. **Agents** execute the work, reporting status back to the engine
-6. **Dashboard** visualizes everything - available resources, jobs, steps, sub-tasks
+1. **Define task templates** as Jira issue types with custom fields
+2. **Create jobs** by filling out a Jira form (create issue of that type)
+3. **Reconciliation engine** watches Jira and spawns agents for new jobs
+4. **Agents** execute the work, updating Jira as they go
+5. **Visualization** is Jira itself - boards, timelines, filters, dashboards
+
+### Why Jira-Native Instead of GitOps?
+
+We originally considered a GitOps approach (templates in Git, jobs committed to Git). But:
+
+**Jira already provides:**
+- Issue types → Task templates
+- Custom fields → Template parameters
+- Required fields → Parameter validation
+- Create screens → Forms for ordering work
+- Subtasks/checklists → Steps
+- Comments → Activity log
+- Attachments → Evidence
+- Built-in dashboards, boards, search
+
+**GitOps would add:**
+- Version control for template changes
+- PR review before deployment
+- "Infrastructure as code" philosophy
+
+**But for v1, GitOps is unnecessary complexity:**
+- Extra integration point (git sync)
+- Users must learn another system
+- Slower iteration on templates
+- We can add it later if needed
+
+**Decision:** Start Jira-native. Add GitOps later if we need version-controlled templates or cross-environment deployment.
 
 ## Key Design Decisions
 
