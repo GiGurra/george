@@ -4,9 +4,24 @@
 
 ## Current Name: George
 
-Named after **George Smiley**, John le Carré's patient spymaster from *Tinker Tailor Soldier Spy*. Smiley is the quintessential handler - methodical, patient, manages networks of agents, does careful reconciliation of information.
+### The Real Origin Story
 
-The metaphor fits: George (the engine) is the handler managing field agents.
+The name "George" was chosen for:
+
+- **George Foreman** - grills, dad jokes
+- **George Pig** - Peppa's little brother
+
+Sometimes the best names come from silly origins.
+
+### The Retroactive Justification
+
+After picking the name, a more impressive backstory was discovered:
+
+**George Smiley**, John le Carré's patient spymaster from *Tinker Tailor Soldier Spy*. Smiley is the quintessential handler - methodical, patient, manages networks of agents, does careful reconciliation of information.
+
+The metaphor genuinely fits: George (the engine) is the handler managing field agents.
+
+We're keeping both origin stories because honesty is important.
 
 ## Alternatives Considered
 
