@@ -366,6 +366,214 @@ notifications:
     events: [job_completed, job_failed]
 ```
 
+## Human Intervention
+
+Humans remain in control. The engine supports several intervention mechanisms.
+
+### Manual Override
+
+Any step can be manually marked as completed, skipped, or unblocked - useful when:
+
+- A verification check has a bug
+- External conditions changed
+- The agent is stuck but the work was actually done
+
+```yaml
+# Via CLI
+george override job/onboard-alice-2024-01 step/provision-laptop \
+  --action complete \
+  --reason "Laptop confirmed via phone call, Slack was down" \
+  --by "johan@company.com"
+
+# Results in status update
+status:
+  steps:
+    - name: provision-laptop
+      state: completed
+      completedAt: "2024-01-20T14:00:00Z"
+      override:
+        action: manual_complete
+        reason: "Laptop confirmed via phone call, Slack was down"
+        by: "johan@company.com"
+        at: "2024-01-20T14:00:00Z"
+```
+
+### Manual Unblock
+
+When a step is blocked (e.g., capability missing), humans can:
+
+1. **Fix and retry** - Add the missing capability, then resume
+2. **Skip** - Mark step as skipped, continue to next
+3. **Override complete** - Mark as done despite the block
+4. **Abort** - Cancel the entire job
+
+```yaml
+# Unblock by skipping
+george unblock job/onboard-alice-2024-01 step/verify-access \
+  --action skip \
+  --reason "Verification will be done manually post-onboarding"
+```
+
+### Approval Gates
+
+Steps can require explicit human approval before proceeding:
+
+```yaml
+steps:
+  - name: delete-old-accounts
+    description: "Delete accounts from previous system"
+    requires_approval:
+      from: ["security-team@company.com", "manager"]
+      message: "Please confirm old accounts should be deleted"
+    done_when:
+      description: "Old accounts deleted"
+```
+
+## Interactive Mode
+
+For debugging, demos, or high-stakes jobs, run in interactive mode.
+
+### Capabilities
+
+- **Pause/Resume** - Stop agent at any point, resume later
+- **Step-through** - Execute one step at a time, wait for human approval
+- **Watch** - Real-time streaming of agent thoughts and actions
+- **Inject** - Send messages/hints to the agent mid-execution
+- **Rollback** - Undo last step (if step supports compensation)
+
+### CLI Usage
+
+```bash
+# Start job in interactive mode
+george run job/onboard-alice-2024-01 --interactive
+
+# Attach to running job
+george attach job/onboard-alice-2024-01
+
+# Interactive commands
+> pause                    # Pause agent
+> resume                   # Resume agent
+> step                     # Execute one step, then pause
+> inject "Check the #it-backup channel instead"
+> status                   # Show current state
+> history                  # Show recent agent actions
+> abort                    # Cancel job
+```
+
+### Dashboard Integration
+
+Interactive mode also available in dashboard:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Job: onboard-alice-2024-01                    [INTERACTIVE] │
+├─────────────────────────────────────────────────────────────┤
+│ Agent thinking...                                           │
+│ > "I need to check if the laptop request was acknowledged   │
+│ >  in #it-requests. Let me search for recent messages..."   │
+│                                                             │
+│ [Pause] [Step] [Inject Message] [Abort]                     │
+├─────────────────────────────────────────────────────────────┤
+│ ✓ Step 1: Create accounts          [completed]              │
+│ ▶ Step 2: Provision laptop         [in_progress]            │
+│   └─ Agent searching Slack...                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Sub-Tasks
+
+Steps can spawn sub-tasks for complex work. Sub-tasks are tracked as nested structures within the job.
+
+### Modeling
+
+```yaml
+status:
+  steps:
+    - name: create-accounts
+      state: in_progress
+      subtasks:
+        - name: create-github-account
+          state: completed
+          evidence: "Invite sent to alice@company.com"
+        - name: create-slack-account
+          state: completed
+          evidence: "User alice.smith created"
+        - name: create-jira-account
+          state: in_progress
+        - name: create-email-account
+          state: pending
+```
+
+### Agent-Created Sub-Tasks
+
+Agents can dynamically create sub-tasks as they discover work:
+
+```yaml
+# Agent discovers additional systems needed for Engineering dept
+subtasks:
+  - name: create-aws-account
+    state: pending
+    created_by: agent
+    reason: "Engineering department requires AWS access"
+```
+
+### Parallel Sub-Tasks
+
+Sub-tasks can run in parallel when independent:
+
+```yaml
+steps:
+  - name: create-accounts
+    parallel_subtasks: true  # Agent can work on multiple simultaneously
+```
+
+## Retry Policies
+
+Configurable at template or job level.
+
+```yaml
+spec:
+  retry:
+    # Step-level retries
+    maxAttempts: 3
+    backoff:
+      initial: 30s
+      multiplier: 2
+      max: 10m
+
+    # What to retry on
+    retryOn:
+      - transient_error
+      - timeout
+      - agent_crash
+
+    # What NOT to retry on
+    noRetryOn:
+      - validation_failed
+      - capability_missing
+      - manual_abort
+```
+
+### Retry Status
+
+```yaml
+status:
+  steps:
+    - name: verify-access
+      state: failed
+      attempts:
+        - attempt: 1
+          at: "2024-01-20T12:00:00Z"
+          error: "GitHub SSO timeout"
+        - attempt: 2
+          at: "2024-01-20T12:01:00Z"
+          error: "GitHub SSO timeout"
+        - attempt: 3
+          at: "2024-01-20T12:03:00Z"
+          error: "GitHub SSO timeout"
+      finalError: "Max attempts exceeded"
+```
+
 ## Security Model
 
 ### Capability Scoping
@@ -399,3 +607,86 @@ Everything is logged:
 - CRD status changes with timestamps
 - Context DB for detailed execution history
 - Agent pod logs for debugging
+
+## Future Considerations
+
+### Template Versioning
+
+What happens when a template changes while jobs are running?
+
+Options:
+1. **Pin on start** - Job uses template version from when it started
+2. **Live update** - Job picks up template changes (risky)
+3. **Manual migration** - Operator decides per-job
+
+Likely: Pin on start, with option to manually migrate.
+
+### Rollback / Compensation
+
+If step 3 fails, should we undo steps 1-2?
+
+```yaml
+steps:
+  - name: create-accounts
+    compensate:
+      description: "Delete created accounts"
+      # Agent interprets this if rollback triggered
+```
+
+This is complex - not all actions are reversible. Probably a v2 feature.
+
+### Concurrency Control
+
+What if two jobs need the same resource (same Slack channel, same human)?
+
+```yaml
+spec:
+  locks:
+    - resource: "slack:#it-requests"
+      scope: exclusive  # Only one job can use at a time
+```
+
+### Cost Tracking
+
+Track LLM token usage per job for enterprise billing:
+
+```yaml
+status:
+  costs:
+    totalTokens: 45000
+    estimatedCost: "$0.45"
+    byStep:
+      create-accounts: 12000
+      provision-laptop: 8000
+```
+
+### Dry-Run Mode
+
+See what an agent *would* do without executing:
+
+```bash
+george run job/onboard-alice --dry-run
+```
+
+Agent narrates its plan without taking actions.
+
+### Agent-to-Agent Communication
+
+Jobs spawning sub-jobs handled by different agents:
+
+```yaml
+steps:
+  - name: request-security-review
+    delegate_to:
+      template: security-review
+      parameters:
+        target: "{{ employeeName }}"
+      wait: true  # Block until sub-job completes
+```
+
+### Recursive Reconciliation
+
+Agents that spawn other tracked agents. The engine would manage:
+- Parent-child job relationships
+- Cascading cancellation
+- Aggregated status views

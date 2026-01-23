@@ -107,6 +107,33 @@ Steps should be idempotent - safe to retry. This enables:
 - Resume after crash
 - Multiple agents potentially working on same job (with coordination)
 
+### Humans Stay in Control
+
+Agents operate autonomously, but humans can intervene at any point:
+
+- **Manual override** - Mark steps as completed/skipped when verification has bugs or external conditions changed
+- **Manual unblock** - Resume blocked steps after fixing the underlying issue
+- **Approval gates** - Require explicit human approval before sensitive steps
+- **Interactive mode** - Follow along in real-time, pause, step-through, inject hints
+
+This is essential for:
+- **Trust** - Operators need to know they can intervene if agents go wrong
+- **Pragmatism** - Sometimes the agent's verification is broken but the work is done
+- **Debugging** - Interactive mode helps understand agent behavior
+- **High-stakes jobs** - Some workflows need human oversight throughout
+
+The engine should make intervention easy, not fight against it.
+
+### Clear Goals Enable Resumption
+
+Each step should have a clear "done_when" condition. This helps:
+
+- **Resumption** - A new agent can check "is this done?" without replaying history
+- **Verification** - Both agents and humans can validate completion
+- **Idempotency** - If already done, don't redo
+
+This aligns with the Kubernetes philosophy: declare desired state, let the system figure out how to get there. Each step's "done_when" is like a resource's desired state.
+
 ## Alternatives Considered
 
 ### Kubernetes as Reconciliation Engine
